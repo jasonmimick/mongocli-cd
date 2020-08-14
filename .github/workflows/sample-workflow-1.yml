@@ -18,18 +18,37 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MONGOCLI_DEB: "https://github.com/mongodb/mongocli/releases/download/v1.4.0/mongocli_1.4.0_linux_x86_64.deb"
+      MCLI_ORG_ID: 5ea0477597999053a5f9cbec
+      #MCLI_PROJECT_ID: $${ secrets.MCLI_PROJECT_ID }}
+      MCLI_SERVICE: "cloud"    # "cloud-manager", "ops-manager"
+      #MCLI_OPS_MANAGER_URL:
+      #MCLI_OPS_MANAGER_CA_CERTIFICATE:
+      #MCLI_OPS_MANAGER_SKIP_VERIFY: false
+    with:
       MCLI_PUBLIC_API_KEY: ${{ secrets.MCLI_PUBLIC_API_KEY }}
       MCLI_PRIVATE_API_KEY: ${{ secrets.MCLI_PRIVATE_API_KEY }} 
+      MCLI_ORG_ID: $${{ secrets.MCLI_ORG_ID }}
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
 
     # Runs a single command using the runners shell
-    - name: Install mongocli
-      run:  curl -OL "${MONGOCLI_DEB}" | dpkg -i
-    # Runs a set of commands using the runners shell
-    - name: Run a multi-line script
-      run: |
-        echo Add other actions to build,
-        echo test, and deploy your project.
+    - name: Create "Basic Plan"
+      run:  |
+        curl -OL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+        mv jq-linux64 jq
+        chmod +x jq
+        export NAME=$(curl -s https://random-word-api.herokuapp.com/word\?number\=2\&swear\=0 | ./jq -r '. | join("-")')
+        echo "NAME=${NAME}"
+        env | grep MCLI
+        curl -sOL "${MONGOCLI_DEB}"
+        dpkg -i $(basename "${MONGOCLI_DEB}")
+        ls -l 
+        mongocli --help
+        mongocli config describe default
+        mongocli iam organizations list
+        mongocli iam projects list
+        PROJECT=$(mongocli iam projects create "${NAME}" --output=json)
+        echo ${PROJECT} 
+        
